@@ -1,4 +1,4 @@
-#import configparser
+import configparser
 from datetime import datetime
 import os
 from pyspark.sql import SparkSession
@@ -15,6 +15,10 @@ os.environ['AWS_SECRET_ACCESS_KEY']=config['ACCESS']['AWS_SECRET_ACCESS_KEY']
 
 
 def create_spark_session():
+    """
+    Creates spark session.
+    """
+    
     spark = SparkSession \
         .builder \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
@@ -23,9 +27,21 @@ def create_spark_session():
 
 
 def process_song_data(spark, input_data, output_data):
+    """
+    Reads from song files, 
+    transforms them into songs and artists data, 
+    and writes them in parquet format.
+    
+    params:
+    - spark: spark session object
+    - input_data: input data path
+    - output_data: output data path
+    """
+    
     # get filepath to song data file
     song_data = input_data + "/song_data/*/*/*/*.json"
     
+    # use schema when read json files
     song_schema = St([
         Fld("num_songs", Int()),
         Fld("artist_id", Str()),
@@ -59,10 +75,21 @@ def process_song_data(spark, input_data, output_data):
 
 
 def process_log_data(spark, input_data, output_data):
+    """
+    Reads from log files, 
+    transforms them into users, time, and songplays data, 
+    and writes them in parquet format. 
+    
+    params:
+    - spark: spark session object
+    - input_data: input data path
+    - output_data: output data path
+    """
 
     # get filepath to log data file
     log_data = input_data + "log_data/*/*/*.json"
     
+    # use schema when read json files
     log_schema = St([
         Fld("artist", Str()),
         Fld("auth", Str()),
@@ -97,9 +124,10 @@ def process_log_data(spark, input_data, output_data):
     # write users table to parquet files
     users_table.write.parquet(output_data + "users", mode="overwrite")
 
-    # create timestamp column from original timestamp column
+    # change column name from ts to start_time
     time_table = df.select(col("ts").alias("start_time")).dropDuplicates()
     
+    # convert datatype of start_time into datetime
     get_timestamp = udf(lambda ts: (datetime.fromtimestamp(ts//1000)), Ts())
     time_table = time_table.withColumn("start_time", get_timestamp("start_time"))
     
@@ -115,7 +143,7 @@ def process_log_data(spark, input_data, output_data):
     # write time table to parquet files partitioned by year and month
     time_table.write.parquet(output_data + "time", mode="overwrite")
     
-    # read in song data to use for songplays table
+    # read in song data to use for songplays and artists table
     song_df = spark.read.parquet(output_data + "songs")
     artist_df = spark.read.parquet(output_data + "artists")
 
@@ -132,16 +160,28 @@ def process_log_data(spark, input_data, output_data):
                 df.location,
                 col("userAgent").alias("user_agent"))\
         .dropDuplicates()
-        
-    # write songplays table to parquet files partitioned by year and month
+
+    # add year and month columns for partitioning
     songplays_table = songplays_table\
         .withColumn("year", year("start_time"))\
-        .withColumn("month", month("start_time"))
+        .withColumn("month", month("start_time"))   
+    
+    # write songplays table to parquet files partitioned by year and month
     songplays_table.write.parquet(output_data + "songplays/songplays", mode="overwrite", 
                                   partitionBy=["year", "month"])
 
 
 def main():
+    """
+    Creates a spark session.
+    Reads from song files, 
+    transforms them into songs and artists data, 
+    and writes them in parquet format.
+    Reads from log files, 
+    transforms them into users, time, and songplays data, 
+    and writes them in parquet format. 
+    """
+    
     spark = create_spark_session()
     input_data = "s3a://udacity-dend/"
     output_data = "hdfs:///user/hadoop/"
