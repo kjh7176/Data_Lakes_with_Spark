@@ -12,7 +12,7 @@ Currently, they don't have an easy way to query their data, which resides in a d
 - `sample_parquet_data.ipynb` is a notebook to show sample data of each table in parquet file.
 
 ## Database Schema
-![ERD](/images/db_schema.PNG "ERD from https://dbdiagram.io/")
+![ERD](https://github.com/kjh7176/data_warehouse/blob/master/images/db_schema.PNG "ERD from https://dbdiagram.io/")
 <table>
     <tr>
         <th>tablename</th>
